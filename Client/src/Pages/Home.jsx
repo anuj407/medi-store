@@ -8,7 +8,7 @@ import {
   Truck,
   CheckCircle,
 } from "lucide-react";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import ProductCard from "../components/ProductCard.jsx";
 import { AppContext } from "../Context/AppContext.jsx";
 import { useLocation } from "react-router-dom";
@@ -18,14 +18,35 @@ const Home = () => {
 
   // ✅ Fetch products from backend with fallback to local assets (only this effect modified)
   const { products,darkMode } =useContext(AppContext);
+  // ✅ run once
   useEffect(() => {
     document.title = "MediStore - Your Trusted Online Pharmacy";
-  })
-  const {pathname}=useLocation();
+  }, []);
+
+  // ✅ scroll on route change
+  const { pathname } = useLocation();
   useEffect(() => {
     window.scrollTo(0, 0);
-  },[pathname]);
+  }, [pathname]);
 
+  // ✅ filter products (professional)
+  const filteredProducts = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return products?.slice(0, 6) || [];
+
+    return (
+      products?.filter((p) => {
+        const name = (p?.name || p?.title || "").toLowerCase();
+        const company = (p?.company || p?.brand || "").toLowerCase();
+        const category = (p?.category || "").toLowerCase();
+        return (
+          name.includes(q) ||
+          company.includes(q) ||
+          category.includes(q)
+        );
+      }) || []
+    ).slice(0, 6);
+  }, [products, searchQuery]);
   return (
     <div
       className={`transition-colors duration-300 ${
@@ -36,7 +57,7 @@ const Home = () => {
     >
       {/* Hero Section */}
       <section
-        className={`relative min-h-screen flex items-center justify-center px-4 py-20 bg-[url(/public/banner-bg.jpg)]`}
+        className={`relative min-h-screen flex items-center justify-center px-4 py-20 bg-[url(/banner-bg.jpg)]`}
       >
         <div className="absolute inset-0 bg-opacity-20"></div>
         <div className="relative z-10 text-center max-w-6xl mx-auto">
@@ -220,17 +241,18 @@ const Home = () => {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {products?.slice(0,6).map((medicine, index) => (
+            {filteredProducts?.map((medicine, index) => (
               <ProductCard
                 key={index}
                 product={medicine}
                 darkMode={darkMode}
               />
             ))}
+            {filteredProducts.length === 0 && <p className={`text-center ${darkMode ? "text-white" : "text-gray-900"}  col-span-full`}>No products found....!</p>}
           </div>
         </div>
       </section>
-
+              
       {/* Testimonials Section */}
       <section
         className={`px-4 py-20 sm:px-6 lg:px-8 ${
