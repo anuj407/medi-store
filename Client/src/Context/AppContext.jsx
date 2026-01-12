@@ -12,6 +12,7 @@ export const AppProvider = ({ children }) => {
    const [cart, setCart] = useState(null);
    const [cartCount, setCartCount] = useState(0);
    const [user, setUser] = useState(null);
+   const [dbUser, setDbUser] = useState(null);
 
      // ✅ Fetch products from backend and save in AppContext
      useEffect(() => {
@@ -39,7 +40,9 @@ export const AppProvider = ({ children }) => {
       products,
       setProducts,
       cart,
-      setCart
+      setCart,
+      dbUser,
+      setDbUser
     }}>
       {children}
     </AppContext.Provider>
