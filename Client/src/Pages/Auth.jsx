@@ -2,7 +2,6 @@ import React, { useContext, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppContext } from "../Context/AppContext";
 
-// ✅ Firebase
 import { auth, googleProvider } from "../firebase";
 import {
   signInWithEmailAndPassword,
@@ -11,122 +10,135 @@ import {
   updateProfile,
 } from "firebase/auth";
 
-// Icons
 import { Mail, Lock, User } from "lucide-react";
-import { registerUser } from "@/api/userApi";
+import { getMe } from "@/api/userApi"; // ✅ new api
+
+const getFirebaseError = (code) => {
+  switch (code) {
+    case "auth/invalid-credential":
+      return "Invalid email or password.";
+    case "auth/wrong-password":
+      return "Invalid email or password.";
+    case "auth/user-not-found":
+      return "Account not found. Please sign up.";
+    case "auth/email-already-in-use":
+      return "Email already registered. Please sign in.";
+    case "auth/weak-password":
+      return "Password should be at least 6 characters.";
+    case "auth/popup-closed-by-user":
+      return "Popup closed. Please try again.";
+    default:
+      return "Something went wrong. Please try again.";
+  }
+};
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
-  const mode = searchParams.get("mode"); // 'signin' or 'signup'
-  const { darkMode } = useContext(AppContext);
+  const mode = searchParams.get("mode"); // signin/signup
+  const navigate = useNavigate();
+
+  const { darkMode, setUser, setDbUser } = useContext(AppContext);
+
   const [isSignup, setIsSignup] = useState(mode === "signup");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
+  useEffect(() => window.scrollTo(0, 0), []);
 
-  const {setUser}=useContext(AppContext)
+  // ✅ After firebase login, sync user with MongoDB
+  const syncDbUser = async () => {
+    const dbUser = await getMe(); // backend creates user if first time
+    setDbUser?.(dbUser);          // optional: if you added this in context
+    return dbUser;
+  };
 
-// ✅ Signup
-const handleSignup = async (e) => {
-  e.preventDefault();
-  setError("");
-  setSuccess("");
-  if (password !== confirmPassword) {
-    setError("Passwords do not match ❌");
-    return;
-  }
-  setLoading(true);
-  try {
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
-    const user = userCredential.user;
-    await updateProfile(user, { displayName: name });
+  // ✅ Signup
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
 
-    // Save user to DB with firebaseUid
-    registerUser({
-      firebaseUid: user.uid,    // ✅ NEW
-        name: user.displayName,
-        profile: user.photoURL || "",
-        email: user.email,
-    });
+    if (!name.trim()) return setError("Please enter your name.");
+    if (password !== confirmPassword) return setError("Passwords do not match.");
 
-    setSuccess("✅ Account created!");
-    navigate("/");
-  } catch (err) {
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-// ✅ Login
-const handleLogin = async (e) => {
-  e.preventDefault();
-  setError("");
-  setSuccess("");
-  setLoading(true);
-  try {
-    const result = await signInWithEmailAndPassword(auth, email, password);
-    const user = result.user;
-    setUser(user);
-    setSuccess("✅ Login successful!");
-    navigate(-1);
-  } catch (err) {
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-};
+      await updateProfile(user, { displayName: name });
 
-// ✅ Google Login
-const handleGoogleLogin = async () => {
-  setError("");
-  setSuccess("");
-  setLoading(true);
-  try {
-    const result = await signInWithPopup(auth, googleProvider);
-    const user = result.user;
+      // ✅ Sync with backend (secure)
+      const dbUser = await syncDbUser();
 
-    // Save/update user in DB
-     registerUser({
-      firebaseUid: user.uid,    // ✅ NEW
-        name: user.displayName,
-        profile: user.photoURL || "",
-        email: user.email,
-    });
+      setUser(user);
+      setSuccess("Account created successfully!");
+      navigate("/", { replace: true, state: { dbUser } });
+    } catch (err) {
+      setError(getFirebaseError(err.code));
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    setSuccess(`✅ Welcome, ${user.displayName}`);
-    setUser(user);
-    navigate(-1);
-  } catch (err) {
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-};
+  // ✅ Login
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setLoading(true);
 
+    try {
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      const user = result.user;
+
+      const dbUser = await syncDbUser();
+
+      setUser(user);
+      setSuccess("Login successful!");
+      navigate(-1, { replace: true, state: { dbUser } });
+    } catch (err) {
+      setError(getFirebaseError(err.code));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ Google Login
+  const handleGoogleLogin = async () => {
+    setError("");
+    setSuccess("");
+    setLoading(true);
+
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      const dbUser = await syncDbUser();
+
+      setUser(user);
+      setSuccess(`Welcome, ${user.displayName || "User"}!`);
+      navigate(-1, { replace: true, state: { dbUser } });
+    } catch (err) {
+      setError(getFirebaseError(err.code));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div
       className="min-h-screen flex items-center justify-center bg-cover bg-center relative"
       style={{ backgroundImage: "url('/auth-banner.jpg')" }}
     >
-      {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
 
-      {/* Auth Card */}
       <div
         className={`relative w-[22rem] md:w-[26rem] px-6 py-8 rounded-2xl shadow-xl border
         ${darkMode ? "bg-gray-900/85 text-white" : "bg-white/95 text-black"}`}
@@ -135,25 +147,20 @@ const handleGoogleLogin = async () => {
           {isSignup ? "Create Account" : "Welcome Back"}
         </h2>
 
-        {/* Error / Success */}
         {error && <p className="text-red-500 text-center text-sm mb-3">{error}</p>}
-        {success && (
-          <p className="text-green-500 text-center text-sm mb-3">{success}</p>
-        )}
+        {success && <p className="text-green-500 text-center text-sm mb-3">{success}</p>}
 
-        {/* Auth Form */}
-        <form
-          className="space-y-4"
-          onSubmit={isSignup ? handleSignup : handleLogin}
-        >
+        <form className="space-y-4" onSubmit={isSignup ? handleSignup : handleLogin}>
           {isSignup && (
             <div className="relative">
               <User className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
               <input
                 type="text"
                 placeholder="Full Name"
+                value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full pl-10 pr-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 dark:bg-gray-800 dark:border-gray-700"
+                required
               />
             </div>
           )}
@@ -205,14 +212,12 @@ const handleGoogleLogin = async () => {
           </button>
         </form>
 
-        {/* Divider */}
         <div className="flex items-center my-5">
           <hr className="flex-1 border-gray-400" />
           <span className="px-3 text-gray-400 text-sm">OR</span>
           <hr className="flex-1 border-gray-400" />
         </div>
 
-        {/* Google Login */}
         <button
           onClick={handleGoogleLogin}
           disabled={loading}
@@ -226,7 +231,6 @@ const handleGoogleLogin = async () => {
           <span>{loading ? "Please wait..." : "Continue with Google"}</span>
         </button>
 
-        {/* Toggle Mode */}
         <div className="text-center text-sm mt-6">
           {isSignup ? "Already have an account?" : "Don't have an account?"}
           <button
