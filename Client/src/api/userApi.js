@@ -1,52 +1,58 @@
 // src/api/userApi.js
 import axios from "axios";
+import { auth } from "../firebase"; // update path if needed
 
 const API = axios.create({
-  baseURL:import.meta.env.VITE_BACKEND_URL,
-  // withCredentials: true,
+  baseURL: import.meta.env.VITE_BACKEND_URL,
 });
 
-// 🔹 Create/Register user after Firebase signup
-export const registerUser = async (userData) => {
-  console.log("userData",userData);
-  console.log("import.meta.env.VITE_BACKEND_API",import.meta.env.VITE_BACKEND_URL);
-  
-  const { data } = await API.post("/users/register", userData);
+/**
+ * ✅ Attach Firebase ID token to every request
+ * Best practice: backend never trusts uid from frontend
+ */
+API.interceptors.request.use(async (config) => {
+  const user = auth.currentUser;
+
+  if (user) {
+    const token = await user.getIdToken(); // Firebase auto refreshes
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+// ✅ Get logged-in user profile (Auto-create Mongo user if first login)
+export const getMe = async () => {
+  const { data } = await API.get("/users/me");
   return data;
 };
 
-// 🔹 Get user profile (with cart & orders populated)
-export const getUserProfile = async (uid) => {
-  const { data } = await API.get(`/users/${uid}`);
+// ✅ Update logged-in user profile
+export const updateMe = async (updateData) => {
+  const { data } = await API.put("/users/me", updateData);
   return data;
 };
 
-// 🔹 Update user profile
-export const updateUserProfile = async (uid, updateData) => {
-  const { data } = await API.put(`/users/${uid}`, updateData);
+// ✅ Add item to cart
+export const addToCart = async (productId, quantity = 1) => {
+  const { data } = await API.post("/users/me/cart", { productId, quantity });
   return data;
 };
 
-// 🔹 Add item to cart
-export const addToCart = async (uid, productId, quantity = 1) => {
-  const { data } = await API.post(`/users/${uid}/cart`, { productId, quantity });
+// ✅ Remove item from cart
+export const removeFromCart = async (productId) => {
+  const { data } = await API.delete(`/users/me/cart/${productId}`);
   return data;
 };
 
-// 🔹 Remove item from cart
-export const removeFromCart = async (uid, productId) => {
-  const { data } = await API.delete(`/users/${uid}/cart/${productId}`);
+// ✅ Place order (backend calculates total securely)
+export const placeOrder = async (orderData) => {
+  const { data } = await API.post("/users/me/orders", orderData);
   return data;
 };
 
-// 🔹 Place order
-export const placeOrder = async (uid, orderData) => {
-  const { data } = await API.post(`/users/${uid}/orders`, orderData);
-  return data;
-};
-
-// 🔹 Get user orders
-export const getUserOrders = async (uid) => {
-  const { data } = await API.get(`/users/${uid}/orders`);
+// ✅ Get my orders
+export const getMyOrders = async () => {
+  const { data } = await API.get("/users/me/orders");
   return data;
 };
