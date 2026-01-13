@@ -1,2 +1,2 @@
 import userIcon from "../assets/user.png"
-export const userProfile = userIcon;
+export const userProfileIcon = userIcon;
