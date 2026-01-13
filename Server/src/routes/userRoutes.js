@@ -1,39 +1,46 @@
 import express from "express";
+
 import {
-  registerUser,
-  getUser,
+  getMe,
+  updateMe,
   getAllUsers,
-  updateUser,
   addToCart,
   removeFromCart,
   placeOrder,
-  getUserOrders,
+  getMyOrders,
 } from "../controllers/userController.js";
+
+import { firebaseAuth } from "../middlewares/firebaseAuth.js";
+import { loadDbUser } from "../middlewares/loadDbUser.js";
+import { allowRoles } from "../middlewares/allowRoles.js";
 
 const router = express.Router();
 
-// 🔹 Register user (after Firebase signup)
-router.post("/register", registerUser);
+/**
+ * ✅ User Profile
+ * /api/users/me
+ */
+router.get("/me", firebaseAuth, loadDbUser, getMe);
+router.put("/me", firebaseAuth, loadDbUser, updateMe);
 
-// 🔹 Get single user by Firebase UID (with cart & orders populated)
-router.get("/:uid", getUser);
+/**
+ * ✅ Cart
+ * /api/users/me/cart
+ */
+router.post("/me/cart", firebaseAuth, loadDbUser, addToCart);
+router.delete("/me/cart/:productId", firebaseAuth, loadDbUser, removeFromCart);
 
-// 🔹 Update user profile
-router.put("/:uid", updateUser);
+/**
+ * ✅ Orders
+ * /api/users/me/orders
+ */
+router.post("/me/orders", firebaseAuth, loadDbUser, placeOrder);
+router.get("/me/orders", firebaseAuth, loadDbUser, getMyOrders);
 
-// 🔹 Add item to cart
-router.post("/:uid/cart", addToCart);
-
-// 🔹 Remove item from cart
-router.delete("/:uid/cart/:productId", removeFromCart);
-
-// 🔹 Place order
-router.post("/:uid/orders", placeOrder);
-
-// 🔹 Get user orders
-router.get("/:uid/orders", getUserOrders);
-
-// 🔹 Get all users (admin only)
-router.get("/", getAllUsers);
+/**
+ * ✅ Admin: users list
+ * /api/users
+ */
+router.get("/", firebaseAuth, loadDbUser, allowRoles("admin"), getAllUsers);
 
 export default router;
