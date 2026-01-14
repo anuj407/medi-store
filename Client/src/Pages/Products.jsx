@@ -3,12 +3,14 @@ import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { AppContext } from "../Context/AppContext";
 import ProductCard from "../components/ProductCard";
 import { useLocation } from "react-router-dom";
+import ProductsPageLoader from "@/components/loaders/ProductsPageLoader";
 
 const Products = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   // const [updatedProducts, setUpdatedProducts] = useState([]);
   const { products, darkMode } = useContext(AppContext);
+  const [loading, setLoading] = useState(true);
 
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -21,7 +23,13 @@ const Products = () => {
   const { pathname } = useLocation();
   useEffect(() => {
     window.scrollTo(0, 0);
+    const timer = setTimeout(() => setLoading(false), 800);
+    return () => clearTimeout(timer);
   }, [pathname]);
+  // 🔹 Loading state
+  if (loading) {
+    return <ProductsPageLoader darkMode={darkMode} />;
+  }
   return (
     <div
       className={`pt-20 pb-4 px-4 sm:px-8 lg:px-16  min-h-screen ${
