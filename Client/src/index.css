@@ -123,3 +123,7 @@
     @apply bg-background text-foreground;
     }
 }
+.input {
+  @apply w-full rounded-xl border px-4 py-2.5 bg-white text-gray-900 outline-none transition;
+  @apply focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500;
+}
