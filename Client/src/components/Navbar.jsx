@@ -5,6 +5,7 @@ import { AppContext } from "../Context/AppContext";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/firebase";
 import { userProfileIcon } from "@/assets/assets";
+import NavbarLoader from "./loaders/NavbarLoader";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -12,6 +13,7 @@ const Navbar = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const { user, setUser, darkMode } = useContext(AppContext);
+  const [navLoading, setNavLoading] = useState(true);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -48,7 +50,8 @@ const Navbar = () => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser || null);
     });
-    return unsubscribe;
+    const timer = setTimeout(() => setNavLoading(false), 800);
+    return ()=>{ unsubscribe; clearTimeout(timer); }
   }, [setUser]);
 
   // ✅ scroll handler
@@ -102,6 +105,11 @@ const Navbar = () => {
 
   const userName = user?.displayName || user?.email || "User";
   const userImage = user?.photoURL || userProfileIcon;
+
+  // ✅ show loader only for Navbar
+  if( navLoading ){
+    return <NavbarLoader darkMode={darkMode} />;
+  }
 
   return (
     <nav
@@ -197,7 +205,7 @@ const Navbar = () => {
                   >
                     <button
                       onClick={() => {
-                        navigate("/profile");
+                        navigate(`/userProfile/${user.uid}`);
                         setDropdownOpen(false);
                       }}
                       className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-green-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
