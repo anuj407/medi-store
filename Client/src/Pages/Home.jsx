@@ -12,9 +12,11 @@ import { useContext, useEffect, useMemo, useState } from "react";
 import ProductCard from "../components/ProductCard.jsx";
 import { AppContext } from "../Context/AppContext.jsx";
 import { useLocation } from "react-router-dom";
+import HomeLoader from "@/components/loaders/HomeLoader.jsx";
 
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [homeLoading, setHomeLoading] = useState(true);
 
   // ✅ Fetch products from backend with fallback to local assets (only this effect modified)
   const { products,darkMode } =useContext(AppContext);
@@ -47,7 +49,20 @@ const Home = () => {
       }) || []
     ).slice(0, 6);
   }, [products, searchQuery]);
+
+  // ✅ manage home loading state
+   useEffect(() => {
+    // if products exist -> stop loading
+    if (products && products.length > 0) {
+      const timer = setTimeout(() => setHomeLoading(false), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [products]);
+  // ✅ show loader only for Home page
+  if (homeLoading) return <HomeLoader darkMode={darkMode} />;
+
   return (
+    <>
     <div
       className={`transition-colors duration-300 ${
         darkMode
@@ -456,6 +471,7 @@ const Home = () => {
         </div>
       </section>
     </div>
+  </>
   );
 }
 export default Home;
