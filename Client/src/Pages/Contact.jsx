@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { AppContext } from "../Context/AppContext";
 import { useLocation } from "react-router-dom";
+import ContactPageLoader from "@/components/loaders/ContactPageLoader";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -21,6 +22,7 @@ const Contact = () => {
   });
   const [errors, setErrors] = useState({});
   const { darkMode } = useContext(AppContext);
+  const [loading, setLoading] = useState(true);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -49,7 +51,15 @@ const Contact = () => {
 const {pathname}=useLocation();
   useEffect(() => {
     window.scrollTo(0, 0);
+    const timer = setTimeout(() => setLoading(false), 800);
+    return () => clearTimeout(timer);
   },[pathname]);
+
+  // 🔹 Loading state
+  if (loading) {
+    return <ContactPageLoader darkMode={darkMode} />;
+  }
+
   return (
     <section
       className={`px-4 py-16 transition-all duration-500 ${
