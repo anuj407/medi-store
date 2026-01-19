@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { AppContext } from "@/Context/AppContext";
 import { useLocation } from "react-router-dom";
+import AboutPageLoader from "@/components/loaders/AboutLoader";
 
 const whyUsData = [
   {
@@ -37,6 +38,7 @@ const whyUsData = [
 ];
 
 const AboutPage = () => {
+
   const faqs = [
     {
       question: "How long does shipping take?",
@@ -109,6 +111,15 @@ const AboutPage = () => {
     useEffect(() => {
       window.scrollTo(0, 0);
     },[pathname]);
+
+  const [aboutLoading, setAboutLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setAboutLoading(false), 1200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (aboutLoading) return <AboutPageLoader darkMode={darkMode} />;
 
   return (
     <div className={`font-sans ${darkMode ? "bg-gray-900 text-white" : "bg-white text-gray-900"}`}>
