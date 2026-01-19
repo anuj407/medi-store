@@ -3,12 +3,14 @@ import { Trash2 } from "lucide-react";
 import { AppContext } from "../Context/AppContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getCart, updateCartItem, removeCartItem } from "../api/cartApi";
+import CartPageLoader from "@/components/loaders/CartPageLoader";
 
 export default function CartPage() {
   const [cartItems, setCartItems] = useState([]);
   const { darkMode, setCartCount, user } = useContext(AppContext);
   const [cartId, setCartId] = useState(null);
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
 
   // 🔹 Fetch cart items from backend
   useEffect(() => {
@@ -18,6 +20,8 @@ export default function CartPage() {
         const data = await getCart(user.uid); // ✅ use uid
         setCartId(data._id);
         setCartItems(data.items || []);
+        const timer = setTimeout(() => setLoading(false), 800);
+        return () => clearTimeout(timer);
       } catch (error) {
         console.error("Error fetching cart:", error);
       }
@@ -76,7 +80,11 @@ export default function CartPage() {
     (sum, item) => sum + parsePrice(item.productId?.price) * item.quantity,
     0
   );
-
+  
+  // 🔹 Loading state
+  if (loading) {
+    return <CartPageLoader darkMode={darkMode} />;
+  }
   return (
     <section
       className={`px-4 sm:px-6 lg:px-8 py-10 sm:py-16 transition-all duration-500 ${
