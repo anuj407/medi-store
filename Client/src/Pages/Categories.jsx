@@ -4,6 +4,7 @@ import { Menu, Search } from "lucide-react";
 import { AppContext } from "../Context/AppContext.jsx";
 import { getCart } from "../api/cartApi";
 import { useLocation } from "react-router-dom";
+import CategoryPageLoader from "@/components/loaders/CategoryPageLoader.jsx";
 
 const CategoryPage = ({ userId }) => {
   const getUniqueValues = (items, key) => [
@@ -21,6 +22,7 @@ const CategoryPage = ({ userId }) => {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const { setCartCount ,products,darkMode} = useContext(AppContext);
+  const [loading, setLoading] = useState(true);
 
   // 🔄 Load cart state from API on mount
   useEffect(() => {
@@ -37,6 +39,8 @@ const CategoryPage = ({ userId }) => {
           inCart: cartItems.includes(product._id),
         }));
         setUpdatedProducts(updatedProducts);
+        const timer = setTimeout(() => setLoading(false), 800);
+        return () => clearTimeout(timer);
       } catch (err) {
         console.error(err);
       }
@@ -111,6 +115,11 @@ const {pathname}=useLocation();
   useEffect(() => {
     window.scrollTo(0, 0);
   },[pathname]);
+
+  // 🔹 Loading state
+  if (loading) {
+    return <CategoryPageLoader darkMode={darkMode} />;
+  }
   return (
     <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pt-20 ${darkMode ? "text-white bg-gray-900" : "text-black bg-white"}`}>
       <h1 className="text-2xl sm:text-3xl font-bold text-center text-green-600 mb-2">
